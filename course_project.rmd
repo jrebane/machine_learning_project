@@ -1,0 +1,197 @@
+---
+output:
+  knitrBootstrap::bootstrap_document:
+    title: "Practical Machine Learning: Final Project"
+    theme: cosmo
+    highlight: google code
+    theme.chooser: FALSE
+    highlight.chooser: FALSE
+---
+
+# Prediction Assignment Write-up
+
+## Assignment Description
+
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement - a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website here: http://groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset). 
+
+The goal of your project is to predict the manner in which they did the exercise. This is the "classe" variable in the training set. You may use any of the other variables to predict with. You should create a report describing how you built your model, how you used cross validation, what you think the expected out of sample error is, and why you made the choices you did. You will also use your prediction model to predict 20 different test cases. 
+
+## Data Processing
+
+This section summarizes the steps taken to load and pre-process the data for use in our algorithm.
+
+### Loading Required Libraries
+
+The following libraries are loaded to facilitate the processing of data loading, analysis, and model development:
+
+```{r message = FALSE}
+require(downloader)
+require(mlbench)
+require(caret)
+require(randomForest)
+require(doSNOW)
+require(dplyr)
+require(ggplot2)
+```
+
+### Loading Data
+
+We are provided training and testing data sets in `.csv` format. The data loading process creates a `data` directory, downloads the testing and training data sets, and stores them into data frames. If those files already exist, it uses those files instead to save on processing time.
+
+```{r warning = FALSE, message = FALSE}
+## Set up data folder
+folderName <- "data"
+
+if (!file.exists(folderName)){
+        message("Creating data folder")
+        dir.create(folderName)
+} else {message("Data folder found in working directory")}
+
+## Get Data
+
+trainingname <- "data/pml-training.csv"
+testingname <- "data/pml-testing.csv"
+
+if (!file.exists("trainingname")){
+        message("Downloading training file")
+        download(url="https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv", 
+                 destfile=trainingname)
+} else {message("Training file found in working directory")}
+
+if (!file.exists("testingname")){
+        message("Downloading testing file")
+        download(url="https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv", 
+                 destfile=testingname)
+} else {message("Testing file found in working directory")}
+```
+
+When loading the data into the data frames, we set the `na.strings` as `#DIV/0`, blank cells, and `NA` to facilitate further data cleaning later on.
+
+```{r}
+## Read data into data frames
+
+if (!exists("training")){
+        message("Storing training data in data frame")
+        training <- read.table(trainingname, sep = ",", header=TRUE,
+                               na.strings=c("#DIV/0!","","NA"))
+        message("Training data stored as 'training'")
+} else {message("Training data frame found in working directory")}
+
+
+
+if (!exists("testing")){
+        message("Storing testing data in data frame")
+        testing <- read.table(testingname, sep = ",", header=TRUE,
+                              na.strings=c("#DIV/0!","","NA"))
+        message("Testing data stored as 'testing'")
+} else {message("Testing data frame found in working directory")}
+```
+
+### Variable Selection
+
+
+#### Removing Variables with NAs
+
+The `testing` and `training` data frames have 160 variables, and many of them seem to have NA values scattered through them. For our first step in paring down the number of variables used, we will therefore cut out all columns with at least on `NA` value. This will leave predictors with complete sets of data which will be easier to work with and will be more likely to generate a model that relies on data that are present in the testing set. We do this for the testing and training sets.
+
+
+```{r}
+training_nona <- training[,colSums(is.na(training)) == 0]
+testing_nona <- testing[,colSums(is.na(training)) == 0]
+```
+
+#### Removing Unrelated Variables
+
+Through a perfunctory glance at the data, we can see that some of the columns in the data set are irrelevant.
+
+```{r}
+head(training_nona[,1:10])
+```
+
+If we look at the first 10 columns, we can see that columns one through six are potentially ID variables and should be removed. We do this for the testing and training sets.
+
+```{r}
+removeBegVals <- as.integer(1:7)
+training_clean <- training_nona[,-removeBegVals]
+testing_clean <- testing_nona[,-removeBegVals]
+```
+
+## Model Selection
+
+### Training and Testing Set Partitioning
+
+Since we will be developing the model for use on the `testing_clean` data set, we want to further partition our `training_clean` data frame such that we can train and optimize our model on it. The cross validation model allocates 70% to the training set, and 30% to the testing set. We set the seed here to ensure reproducibility.
+
+```{r}
+set.seed(1337)
+inTrain <- createDataPartition(y=training_clean$classe,
+                               p=0.7, list = FALSE)
+sub_training <- training_clean[inTrain,]
+sub_testing <- training_clean[-inTrain,]
+```
+
+### Prediction Algorithm
+
+In the paper outlining the weight lifting exercise classification data set, the authors describe their choice in prediction algorithm by writing, "Because of the characteristic noise in the sensor data, we used a Random Forest approach." (Velloso et al., 2013) Because of this factor, and because the lecture material advocated strongly for the use of Random Forest models, we build our prediction algorithm using a Random Forest approach.
+
+### Cross Validation
+
+We apply further Cross Validation to our algorithm by using K-Folds Repeated Cross Validation with Five folds. We accomplish using the following code:
+
+```{r}
+userControl <-  trainControl(method = "repeatedcv", number = 5)
+```
+
+### Multi-Threading
+
+In order to optimize our CPU usage and decrease the time needed to perform calculations, we set up multi-threading using the `doSNOW` package. For our purposes, we make use of four CPU cores.
+
+```{r cache = TRUE}
+cl <- makeCluster(4)
+registerDoSNOW(cl)
+```
+
+## Model Assessment
+
+### Model Execution
+
+Based on our design criteria, we then execute our algorithm by training on the `sub_training` data set using our `userControl` parameters.
+
+```{r cache = TRUE}
+userControl <-  trainControl(method = "repeatedcv", number = 5)
+modFit <- train(classe ~.,data = sub_training, method="rf", trControl = userControl)
+print(modFit$finalModel)
+stopCluster(cl)
+```
+
+### Out-of-Sample Cross Validation
+
+```{r}
+results_test <- predict(modFit, sub_testing)
+con_matrix <- confusionMatrix(results_test, sub_testing$classe)
+print(con_matrix)
+```
+
+Applying our model, `modFit`, to our testing partition, `sub_testing`, we see an Out-of Sample accuracy of `r con_matrix$overall['Accuracy']`, which implies an out-of-sample error rate of `r 1 - con_matrix$overall['Accuracy']`.
+
+## Predicting Assignment Values
+
+The out of sample error rate is not bad! So, let's apply this model to the `testing_clean` data set and generate our predictions accordingly.
+
+```{r warning = FALSE}
+test_results <- predict(modFit, testing_clean)
+print(test_results)
+pml_write_files = function(x){
+        n = length(x)
+        for(i in 1:n){
+                filename = paste0("problem_id_",i,".txt")
+                write.table(x[i],file=filename,quote=FALSE,
+                            row.names=FALSE,col.names=FALSE)
+        }
+}
+dir.create("test_case_results")
+setwd("test_case_results")
+pml_write_files(test_results)
+```
+
+Submitting these through the assignment page, we get 100% correct, which goes to show that this model may be quite effective after all.

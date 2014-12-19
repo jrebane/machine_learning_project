@@ -1,0 +1,12 @@
+base
+downloader
+mlbench
+lattice
+ggplot2
+caret
+randomForest
+foreach
+iterators
+snow
+doSNOW
+dplyr
