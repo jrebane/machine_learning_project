@@ -871,7 +871,7 @@ Practical Machine Learning: Final Project
 <h1>Prediction Assignment Write-up</h1>
 <h2>Assignment Description</h2>
 <p>Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement - a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website here: http://groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset).</p>
-<p>The goal of your project is to predict the manner in which they did the exercise. This is the &quot;classe&quot; variable in the training set. You may use any of the other variables to predict with. You should create a report describing how you built your model, how you used cross validation, what you think the expected out of sample error is, and why you made the choices you did. You will also use your prediction model to predict 20 different test cases.</p>
+<p>The goal of your project is to predict the manner in which they did the exercise. This is the <code>classe</code> variable in the training set. You may use any of the other variables to predict with. You should create a report describing how you built your model, how you used cross validation, what you think the expected out of sample error is, and why you made the choices you did. You will also use your prediction model to predict 20 different test cases.</p>
 <h2>Data Processing</h2>
 <p>This section summarizes the steps taken to load and pre-process the data for use in our algorithm.</p>
 <h3>Loading Required Libraries</h3>
@@ -935,8 +935,7 @@ if (!exists("training")){
 <button class="message R toggle btn btn-xs btn-info">
 <span class="glyphicon glyphicon-chevron-down"></span> R message
 </button>
-<pre style=""><code class="message r">## Storing training data in data frame
-## Training data stored as 'training'
+<pre style=""><code class="message r">## Training data frame found in working directory
 </code></pre>
 <button class="source R toggle btn btn-xs btn-primary">
 <span class="glyphicon glyphicon-chevron-down"></span> R source
@@ -950,8 +949,7 @@ if (!exists("training")){
 <button class="message R toggle btn btn-xs btn-info">
 <span class="glyphicon glyphicon-chevron-down"></span> R message
 </button>
-<pre style=""><code class="message r">## Storing testing data in data frame
-## Testing data stored as 'testing'
+<pre style=""><code class="message r">## Testing data frame found in working directory
 </code></pre>
 </div>
 <h3>Variable Selection</h3>
@@ -1065,7 +1063,9 @@ print(modFit$finalModel)</code></pre>
 </button>
 <pre style=""><code class="source r">stopCluster(cl)</code></pre>
 </div>
-<h3>Out-of-Sample Cross Validation</h3>
+<p>Our output shows an <strong>out of bag error rate</strong> of <strong>0.7%</strong>. Therefore, we can predict that our <strong>Out-of-Sample Error Rate</strong> would be close to <strong>0.7%</strong>.</p>
+<h3>Out-of-Sample Error Rate &amp; Cross Validation</h3>
+<p>We then calculate our actual Out-of-Sample Error Rate estimate by using our model to predict on the <code>sub_testing</code> data set.</p>
 <div class="row">
 <button class="source R toggle btn btn-xs btn-primary">
 <span class="glyphicon glyphicon-chevron-down"></span> R source
@@ -1109,7 +1109,7 @@ print(con_matrix)</code></pre>
 ## Balanced Accuracy      0.9991   0.9930   0.9922   0.9921   0.9994
 </code></pre>
 </div>
-<p>Applying our model, <code>modFit</code>, to our testing partition, <code>sub_testing</code>, we see an Out-of Sample accuracy of 0.9930331, which implies an out-of-sample error rate of 0.0069669.</p>
+<p>Applying our model, <code>modFit</code>, to our <strong>cross validation data set</strong>, <code>sub_testing</code>, we see an <strong>Out-of Sample accuracy</strong> of <strong>0.9930331</strong>, which implies an <strong>out-of-sample error rate of 0.0069669</strong>.</p>
 <h2>Predicting Assignment Values</h2>
 <p>The out of sample error rate is not bad! So, let's apply this model to the <code>testing_clean</code> data set and generate our predictions accordingly.</p>
 <div class="row">
